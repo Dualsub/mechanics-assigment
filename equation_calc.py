@@ -45,12 +45,10 @@ def calc_diff():
     ])
 
     mae_r = np.dot(m*a, e_r)
-    printLatex(mae_r)
 
     F = np.array([0,0,-m*g])
 
     Fe_r = np.dot(F, e_r).simplify()
-    printLatex(Fe_r)
 
     diffEq = Eq(Fe_r, mae_r)
 

@@ -10,7 +10,6 @@ def compute(T : tuple = (0, 10.0), substep : float = 0.1, xi_0 : float = 10.0, x
     f_xi_0 = 0.2*xi**2 + 2
     diff_eq_0 = diff_eq.subs([(g, 9.82), (omega, omega_0), (m, m_0), (f, f_xi_0)]).simplify()
     d2xi_dt2 = solve(diff_eq_0, xi.diff(t,t))[0]
-    print(d2xi_dt2)
 
     # print(xi_expr)
     T_vals = np.linspace(T[0], T[1], int((T[1]-T[0]) / substep))
@@ -21,15 +20,14 @@ def compute(T : tuple = (0, 10.0), substep : float = 0.1, xi_0 : float = 10.0, x
         return [X1, X2]
 
     SOL = odeint(model, [xi_0, xi_vel_0], T_vals)
-    SOL_xi = list([SOL[i][1] for i in range(len(SOL))])
+    SOL_xi = list([SOL[i][0] for i in range(len(SOL))])
 
     if(computePos):
         positions = list([(SOL_xi[i] * math.cos(omega_0*T_vals[i]), SOL_xi[i] * math.sin(omega_0*T_vals[i]), f_xi_0.subs(xi, SOL_xi[i])) for i in range(len(SOL_xi))])
-        # positions = list([(SOL_xi[i], 0, f_xi_0.subs(xi, SOL_xi[i]).evalf()) for i in range(len(SOL_xi))])
         return T_vals, positions
     else:
         return T_vals, SOL_xi
 
 
 if(__name__ == "__main__"):
-    compute(T=(0, 60.0))
+    compute(T=(0, 10.0))
