@@ -3,7 +3,7 @@ import numpy as np
 
 # För att printa det korrekta LaTex-uttrycket.
 def printLatex(expr):
-    print("Latex Expression:\n\n", latex(expr).replace("ξ", r"\xi").replace("ω", r"\omega_0"))
+    print(r"\\"+"\n", latex(expr).replace("ξ", r"\xi").replace("ω", r"\omega_0"))
 
 # Symbolisk beräkning av differential ekvationen.
 def calc_diff():
