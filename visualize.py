@@ -5,52 +5,86 @@ from matplotlib import animation
 import argparse
 import datetime
 import math
+import json
 import numpy as np
 
-def main():
+def parseParameters():
     parser = argparse.ArgumentParser(description='.')
     parser.add_argument("-m", "--mode", help="what mode to run in; 3D, anim or 2D", action="store")
     parser.add_argument("-s", "--save", help="whether or not to save the figure", action="store_true")
+    parser.add_argument("-S", "--settings", help="uses a supplied json-file as parameters. Will then ignore all other cmd parameters.", action="store")
     parser.add_argument("-t", "--time", help="give timespan and resolution on the form t0:t1:ts", action="store")
     parser.add_argument("-p", "--parameters", help="give parameters on the form m:w_0:xi_0:xi_dot_0", action="store")
     args = parser.parse_args()
-    
-    mode_str = str(args.mode).lower()
-    pos = mode_str == "3d" or mode_str == "anim"
 
-    t1 = 0.0
-    t2 = 10.0
-    ts = .01
-    if(args.time != None):
-        time_str = str(args.time).split(":")
-        t1 = float(time_str[0])
-        t2 = float(time_str[1])
-        ts = float(time_str[2]) if mode_str != "anim" else (1/30)
+    settings = {
+        "mode" : "",
+        "t1" : 0.0,
+        "t2" : 10.0,
+        "ts" : .01,
+        "m" : 1.0,
+        "omega_0" : math.pi,
+        "xi_0" : 10.0,
+        "xi_dot_0" : 0,
+        "save" : False
+    }
 
-    m = 1.0
-    w_0 = math.pi
-    xi_0 = 10.0
-    xi_dot_0 = 0
-    if(args.parameters != None):
-        parameter_str = str(args.parameters).split(":")
-        m = float(parameter_str[0])
-        w_0 = float(parameter_str[1])
-        xi_0 = float(parameter_str[2])
-        xi_dot_0 = float(parameter_str[3])
+    if(args.settings != None):
+        with open(str(args.settings)) as settings_file:
+            settings = json.loads(settings_file.read())
+            settings["computePos"] = settings["mode"] == "3d" or settings["mode"] == "anim"
+    else:
 
+        settings["mode"] = str(args.mode).lower()
+        settings["computePos"] = settings["mode"] == "3d" or settings["mode"] == "anim"
+        settings["save"]  = args.save
 
-    t, out = compute(T=(t1, t2), substep=ts, xi_0=xi_0, xi_vel_0=xi_dot_0, m_0=m, omega_0=w_0, computePos=pos)
+        if(args.time != None):
+            time_str = str(args.time).split(":")
+            settings["t1"] = float(time_str[0])
+            settings["t2"] = float(time_str[1])
+            settings["ts"] = float(time_str[2]) if settings["mode"] != "anim" else (1/30)
+
+        if(args.parameters != None):
+            parameter_str = str(args.parameters).split(":")
+            settings["m"] = float(parameter_str[0])
+            settings["omega_0"] = float(parameter_str[1])
+            settings["xi_0"] = float(parameter_str[2])
+            settings["xi_dot_0"] = float(parameter_str[3])
+
+    print("Running with the following parameters:")
+    print("Mass:".ljust(12).rjust(16), settings["m"])
+    print("Omega:".ljust(12).rjust(16), settings["omega_0"])
+    print("Position:".ljust(12).rjust(16), settings["xi_0"])
+    print("Velocity:".ljust(12).rjust(16), settings["xi_dot_0"])
+    print("Timespan:".ljust(12).rjust(16), str(settings["t2"])+" -> "+str(settings["t2"]))
+    print("Timestep:".ljust(12).rjust(16), settings["ts"])
+
+    return settings
+
+def main():
+    settings = parseParameters()
+
+    t, out = compute(
+        T=(settings["t1"], settings["t2"]), 
+        substep=settings["ts"], 
+        xi_0=settings["xi_0"], 
+        xi_vel_0=settings["xi_dot_0"], 
+        m_0=settings["m"], 
+        omega_0=settings["omega_0"], 
+        computePos=settings["computePos"]
+    )
     ani = None
-    if(mode_str == "2d"):
+    if(settings["mode"] == "2d"):
        plt.plot(t, out)
-    elif(mode_str == "3d"):
+    elif(settings["mode"] == "3d"):
         fig = plt.figure()
         ax = fig.add_subplot(111,projection='3d')
         X = list([p[0] for p in out])
         Y = list([p[1] for p in out])
         Z = list([p[2] for p in out])
         ax.plot(X,Y,Z)
-    elif(mode_str == "anim"):
+    elif(settings["mode"] == "anim"):
         
         fig = plt.figure()
         ax = Axes3D(fig)
@@ -71,9 +105,7 @@ def main():
 
         def animate(iteration):
             i = iteration
-
-            # update f
-
+            
             # update quiver
             soa = np.array([
             [0, 0, 0, 10*math.cos(w_0 * t[i]), 10*math.sin(w_0 * t[i]), 0], 
@@ -94,7 +126,7 @@ def main():
             y.append(out[i][1])
             z.append(out[i][2])
             plot._offsets3d = (x,y,z)
-            
+
             return plot,
 
         sorted_x = sorted([out[i][0] for i in range(len(out))])
@@ -127,7 +159,7 @@ def main():
         raise Exception(f"Not supported mode: {mode_str}")
 
 
-    if(args.save):
+    if(save):
         extention = "png" if mode_str == "3d" or mode_str == "2d" else "gif"
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
         file_name = f"figures/fig_{time_str}.{extention}"
